@@ -27,24 +27,54 @@ A Spring Boot application demonstrating three key AI/LLM concepts using the [Spr
 
 ## Architecture
 
-```
-spring-boot-ai-projects
-├── RAG Pipeline
-│   ├── Ingest: text → TokenTextSplitter → EmbeddingModel → SimpleVectorStore
-│   └── Query:  question → similarity search → LLM (with context) → answer
-│
-├── LangChain Concepts
-│   ├── PromptTemplate  – {variable} placeholder resolution
-│   ├── LLMChain        – single prompt + LLM call
-│   ├── ConversationChain – multi-turn chat with rolling message history
-│   └── SequentialChain – pipe output of step N as input to step N+1
-│
-└── LangGraph Concepts
-    ├── GraphState  – immutable key-value state shared across nodes
-    ├── GraphNode   – functional interface: GraphState → GraphState
-    ├── GraphEdge   – static or conditional next-node selector
-    ├── StateGraph  – fluent graph builder
-    └── CompiledGraph – executable, cycle-safe graph runner
+```mermaid
+graph TB
+    Client(["🌐 HTTP Client"])
+
+    subgraph App["Spring Boot AI Projects · localhost:8080"]
+        direction TB
+
+        subgraph RAG["RAG Pipeline  /api/rag"]
+            RagCtrl["RagController"]
+            RagSvc["RagService"]
+            Splitter["TokenTextSplitter"]
+            Embed["EmbeddingModel"]
+            VStore[("SimpleVectorStore")]
+        end
+
+        subgraph LC["LangChain  /api/langchain"]
+            LCCtrl["LangChainController"]
+            LCSvc["LangChainService"]
+            LLMChain["LLMChain"]
+            ConvChain["ConversationChain"]
+            SeqChain["SequentialChain"]
+        end
+
+        subgraph LG["LangGraph  /api/langgraph"]
+            LGCtrl["LangGraphController"]
+            LGSvc["LangGraphService"]
+            SGraph["StateGraph"]
+            CGraph["CompiledGraph"]
+        end
+    end
+
+    OpenAI(["☁️ OpenAI API"])
+
+    Client -->|POST /ingest\nPOST /query| RagCtrl
+    Client -->|POST /llm-chain\nPOST /conversation\nPOST /sequential-chain| LCCtrl
+    Client -->|POST /routing-workflow\nPOST /react-workflow\nPOST /pipeline-workflow| LGCtrl
+
+    RagCtrl --> RagSvc
+    RagSvc --> Splitter --> Embed --> VStore
+    RagSvc --> OpenAI
+
+    LCCtrl --> LCSvc
+    LCSvc --> LLMChain & ConvChain & SeqChain
+    LLMChain & ConvChain & SeqChain --> OpenAI
+
+    LGCtrl --> LGSvc
+    LGSvc --> SGraph --> CGraph
+    CGraph --> OpenAI
 ```
 
 ---
@@ -294,6 +324,43 @@ RAG (Retrieval-Augmented Generation) grounds LLM responses in a private knowledg
 2. **Retrieval** – The user query is embedded and a cosine-similarity search retrieves the top-K most relevant chunks.
 3. **Generation** – Retrieved chunks are injected as context into the system prompt, preventing hallucination on proprietary data.
 
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Client
+    participant RagController
+    participant RagService
+    participant TokenTextSplitter
+    participant EmbeddingModel
+    participant SimpleVectorStore
+    participant OpenAI
+
+    Note over Client,OpenAI: ── Ingestion flow ──────────────────────────────
+    Client->>RagController: POST /api/rag/ingest {content, source}
+    RagController->>RagService: ingestDocument(content, source)
+    RagService->>TokenTextSplitter: split(document)
+    TokenTextSplitter-->>RagService: chunks[]
+    RagService->>EmbeddingModel: embed(chunks)
+    EmbeddingModel->>OpenAI: embedding request
+    OpenAI-->>EmbeddingModel: vectors[]
+    EmbeddingModel-->>RagService: embedded chunks
+    RagService->>SimpleVectorStore: store(embeddedChunks)
+    RagService-->>Client: {chunksStored: N}
+
+    Note over Client,OpenAI: ── Query / Generation flow ──────────────────────
+    Client->>RagController: POST /api/rag/query {question, topK}
+    RagController->>RagService: query(question, topK)
+    RagService->>EmbeddingModel: embed(question)
+    EmbeddingModel->>OpenAI: embedding request
+    OpenAI-->>EmbeddingModel: query vector
+    EmbeddingModel-->>RagService: query vector
+    RagService->>SimpleVectorStore: similaritySearch(vector, topK)
+    SimpleVectorStore-->>RagService: relevant chunks
+    RagService->>OpenAI: system prompt + context + question
+    OpenAI-->>RagService: answer
+    RagService-->>Client: {answer, sourcesUsed}
+```
+
 > In production, replace `SimpleVectorStore` with a persistent store such as PgVector, Pinecone, or Weaviate.
 
 ### LangChain Concepts
@@ -314,3 +381,28 @@ RAG (Retrieval-Augmented Generation) grounds LLM responses in a private knowledg
 | `GraphEdge` | `@FunctionalInterface` – returns the name of the next node (or `END`) |
 | `StateGraph` | Fluent builder: `addNode`, `addEdge`, `addConditionalEdge`, `setEntryPoint`, `compile()` |
 | `CompiledGraph` | Executes the graph; guards against infinite cycles with a 50-step limit |
+
+The three built-in workflows and their node topology:
+
+```mermaid
+flowchart TD
+    subgraph Routing["Intent-Routing Workflow"]
+        R_START([START]) --> classify_intent
+        classify_intent -->|QUESTION| handle_question --> R_END([END])
+        classify_intent -->|TASK| handle_task --> R_END
+    end
+
+    subgraph ReAct["ReAct Agent Loop"]
+        RA_START([START]) --> reason
+        reason --> act
+        act -->|contains 'FINAL ANSWER'| RA_END([END])
+        act -->|otherwise| reason
+    end
+
+    subgraph Pipeline["Multi-Stage Pipeline"]
+        P_START([START]) --> extract_entities
+        extract_entities --> analyze_sentiment
+        analyze_sentiment --> generate_report
+        generate_report --> P_END([END])
+    end
+```
