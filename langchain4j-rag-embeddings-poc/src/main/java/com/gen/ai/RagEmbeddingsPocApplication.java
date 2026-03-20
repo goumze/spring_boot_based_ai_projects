@@ -1,0 +1,13 @@
+package com.gen.ai;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class RagEmbeddingsPocApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(RagEmbeddingsPocApplication.class, args);
+    }
+
+}
