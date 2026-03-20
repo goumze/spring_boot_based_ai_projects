@@ -1,0 +1,25 @@
+# Maven build output
+target/
+
+# IDE files
+.idea/
+*.iml
+*.ipr
+*.iws
+.classpath
+.project
+.settings/
+
+# VS Code
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment / secrets
+.env
+*.env
+
+# Spring Boot devtools restart file
+.spring-boot-devtools.properties

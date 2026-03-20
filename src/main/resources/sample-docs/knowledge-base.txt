@@ -1,0 +1,72 @@
+Spring AI Overview
+==================
+
+Spring AI is a project within the Spring ecosystem that aims to simplify the development of
+applications that incorporate Artificial Intelligence functionality without unnecessary complexity.
+
+Key Features:
+- Support for all major AI model providers (OpenAI, Anthropic, Mistral, Ollama, etc.)
+- Portable Chat, Embedding, Image, and Audio APIs across AI providers
+- Synchronous and streaming API options
+- Mapping of AI Model output to POJOs
+- Support for Vector Stores (Postgres PgVector, Redis, Weaviate, Pinecone, Chroma, etc.)
+- Function/Tool Calling support
+- ETL framework for loading, transforming, and writing data into vector stores
+- Prompt templates and output parsers
+
+RAG (Retrieval-Augmented Generation)
+======================================
+
+RAG is a technique that combines information retrieval with language generation. It consists of:
+
+1. Ingestion Phase:
+   - Load documents from various sources (PDFs, text files, web pages, databases)
+   - Split documents into smaller chunks using text splitters
+   - Generate embeddings (vector representations) for each chunk
+   - Store the embeddings in a vector database
+
+2. Retrieval Phase:
+   - Convert the user query into an embedding
+   - Perform similarity search in the vector database
+   - Retrieve the top-K most relevant chunks
+
+3. Generation Phase:
+   - Inject the retrieved chunks as context into the LLM prompt
+   - The LLM generates a response grounded in the retrieved context
+   - This reduces hallucinations and allows answering questions about private data
+
+Spring AI Vector Stores
+========================
+
+Spring AI supports multiple vector stores out of the box:
+- SimpleVectorStore: In-memory store, great for development and testing
+- PgVectorStore: PostgreSQL with pgvector extension, good for production
+- RedisVectorStore: Redis-based vector storage
+- PineconeVectorStore: Pinecone managed vector database
+- ChromaVectorStore: Chroma open-source embedding database
+- WeaviateVectorStore: Weaviate vector search engine
+
+LangChain Concepts
+==================
+
+LangChain is a framework for building LLM-powered applications. Key concepts include:
+
+1. Prompt Templates: Reusable templates with variable placeholders
+2. Chains: Sequences of LLM calls where output flows as input
+3. Memory: Storing conversation history for multi-turn conversations
+4. Agents: LLMs that can use tools to accomplish tasks
+5. Tools: Functions that agents can invoke (web search, calculators, APIs, etc.)
+6. Output Parsers: Convert raw LLM text into structured objects
+
+LangGraph Concepts
+==================
+
+LangGraph extends LangChain to support stateful, multi-actor workflows:
+
+1. State: A shared object passed between all nodes in the graph
+2. Nodes: Processing units that read from and write to the state
+3. Edges: Connections between nodes (static or conditional)
+4. Entry Point: The first node to execute
+5. Cycles: Graphs can have cycles enabling agent loops
+6. Conditional Routing: Edges can route based on state contents
+7. Human-in-the-loop: Graphs can pause for human input
